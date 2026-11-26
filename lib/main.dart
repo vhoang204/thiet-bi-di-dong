@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'core/app_colors.dart';
 import 'core/app_sizes.dart';
-import 'screens/gd06_product_list.dart';
-import 'screens/gd07_product_detail.dart';
-import 'screens/gd08_cart.dart';
+import 'screens/dangnhap.dart';
+import 'screens/dangky.dart';
+import 'screens/quenmatkhau.dart';
+import 'screens/caidat.dart';
+import 'screens/danhsach.dart';
+import 'screens/chitietsanpham.dart';
+import 'screens/giohang.dart';
 
-void main() => runApp(const GiaoDien());
+void main() => runApp(const ShopEasyApp());
 
-class GiaoDien extends StatelessWidget {
-  const GiaoDien({super.key});
+class ShopEasyApp extends StatelessWidget {
+  const ShopEasyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'GiaoDien UI',
+      title: 'ShopEasy UI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -31,6 +35,30 @@ class HomeMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lessons = [
+      {
+        'code': 'GD 1',
+        'title': 'Màn hình Đăng nhập',
+        'minutes': 30,
+        'screen': const Gd01Login(),
+      },
+      {
+        'code': 'GD 2',
+        'title': 'Màn hình Đăng ký',
+        'minutes': 30,
+        'screen': const Gd02Register(),
+      },
+      {
+        'code': 'GD 3',
+        'title': 'Màn hình Quên mật khẩu',
+        'minutes': 20,
+        'screen': const GdForgotPassword(),
+      },
+      {
+        'code': 'GD 4',
+        'title': 'Màn hình Cài đặt',
+        'minutes': 25,
+        'screen': const Gd04Settings(),
+      },
       {
         'code': 'GD 6',
         'title': 'Danh sách sản phẩm',
@@ -53,7 +81,7 @@ class HomeMenu extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thực hành Giao diện (GD 6 - GD 8)'),
+        title: const Text('Thực hành Giao diện Flutter'),
         backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
       ),

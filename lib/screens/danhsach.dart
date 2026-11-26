@@ -3,8 +3,8 @@ import '../core/app_colors.dart';
 import '../core/app_sizes.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
-import 'gd07_product_detail.dart';
-import 'gd08_cart.dart';
+import 'chitietsanpham.dart';
+import 'giohang.dart';
 
 class Gd06ProductList extends StatefulWidget {
   const Gd06ProductList({super.key});
