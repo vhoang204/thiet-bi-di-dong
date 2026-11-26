@@ -2,282 +2,290 @@ import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import '../core/app_sizes.dart';
 import '../models/product.dart';
+import '../services/api_service.dart';
 
 class Gd07ProductDetail extends StatefulWidget {
-  final Product? product;
-
-  const Gd07ProductDetail({super.key, this.product});
+  final int productId;
+  const Gd07ProductDetail({super.key, required this.productId});
 
   @override
   State<Gd07ProductDetail> createState() => _Gd07ProductDetailState();
 }
 
 class _Gd07ProductDetailState extends State<Gd07ProductDetail> {
-  late final Product _product;
-  int _currentPage = 0;
-  bool _isFavorite = false;
-  bool _isExpanded = false;
+  Product? product;
+  bool isLoading = true;
+  String? error;
+  int _selectedImageIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _product = widget.product ?? MockData.products.first;
+    _loadProduct();
+  }
+
+  Future<void> _loadProduct() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+    try {
+      final p = await ApiService.getProduct(widget.productId);
+      if (!mounted) return;
+      setState(() {
+        product = p;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = errorMessage(e);
+        isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSizes.p16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _product.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+      appBar: AppBar(
+        title: const Text('Chi tiết sản phẩm'),
+        backgroundColor: AppColors.navy,
+        foregroundColor: Colors.white,
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSizes.p24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(error!, textAlign: TextAlign.center),
+              const SizedBox(height: AppSizes.p16),
+              FilledButton(
+                onPressed: _loadProduct,
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final item = product!;
+    final displayImages = item.images.isNotEmpty
+        ? item.images
+        : [item.thumbnail];
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSizes.p16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Ảnh lớn
+                Container(
+                  height: 260,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(AppSizes.p12),
                   ),
-                  const SizedBox(height: AppSizes.p8),
-                  _buildRatingRow(),
-                  const SizedBox(height: AppSizes.p16),
-                  _buildPriceRow(),
-                  const Divider(height: AppSizes.p32, color: AppColors.border),
-                  const Text(
-                    'Mô tả',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.p8),
-                  Text(
-                    _product.description,
-                    maxLines: _isExpanded ? null : 3,
-                    overflow: _isExpanded
-                        ? TextOverflow.visible
-                        : TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                    child: Text(
-                      _isExpanded ? 'Thu gọn' : 'Xem thêm',
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSizes.p12),
+                    child: Image.network(
+                      displayImages[_selectedImageIndex],
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_outlined,
+                        size: 48,
+                        color: AppColors.grey,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 80),
+                ),
+                // Dải ảnh thu nhỏ nếu có nhiều ảnh
+                if (displayImages.length > 1) ...[
+                  const SizedBox(height: AppSizes.p12),
+                  SizedBox(
+                    height: 60,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: displayImages.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: AppSizes.p8),
+                      itemBuilder: (context, idx) {
+                        final isSelected = idx == _selectedImageIndex;
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedImageIndex = idx),
+                          child: Container(
+                            width: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppSizes.p8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.border,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Image.network(
+                              displayImages[idx],
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomBar(),
-    );
-  }
-
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 300,
-      pinned: true,
-      backgroundColor: AppColors.navy,
-      leading: Padding(
-        padding: const EdgeInsets.all(AppSizes.p8),
-        child: CircleAvatar(
-          backgroundColor: Colors.white.withValues(alpha: 0.85),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: AppColors.textPrimary,
-              size: 20,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.all(AppSizes.p8),
-          child: CircleAvatar(
-            backgroundColor: Colors.white.withValues(alpha: 0.85),
-            child: IconButton(
-              icon: Icon(
-                _isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: _isFavorite ? AppColors.error : AppColors.textPrimary,
-                size: 20,
-              ),
-              onPressed: () => setState(() => _isFavorite = !_isFavorite),
-            ),
-          ),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            PageView.builder(
-              itemCount: _product.imageUrls.length,
-              onPageChanged: (index) => setState(() => _currentPage = index),
-              itemBuilder: (_, index) => Image.network(
-                _product.imageUrls[index],
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFE2E8F0),
-                  child: const Icon(
-                    Icons.image,
-                    size: 64,
-                    color: AppColors.grey,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: AppSizes.p12,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  _product.imageUrls.length,
-                  (index) => Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: _currentPage == index ? 10 : 8,
-                    height: _currentPage == index ? 10 : 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _currentPage == index
-                          ? AppColors.primary
-                          : Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRatingRow() {
-    return Row(
-      children: [
-        ...List.generate(
-          5,
-          (_) => const Icon(Icons.star, size: 18, color: AppColors.star),
-        ),
-        const SizedBox(width: AppSizes.p8),
-        Text(
-          '${_product.rating} · ${_product.reviewCount} đánh giá',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPriceRow() {
-    return Row(
-      children: [
-        Text(
-          MockData.formatCurrency(_product.price),
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(width: AppSizes.p12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.accentOrange,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            '-${_product.discountPercent}%',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(AppSizes.p12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 46,
-                child: OutlinedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã thêm sản phẩm vào giỏ hàng'),
+                const SizedBox(height: AppSizes.p16),
+                // Danh mục & Đánh giá
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Chip(
+                      label: Text(item.category.toUpperCase()),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      labelStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
                       ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.p8),
                     ),
-                  ),
-                  child: const Text(
-                    'Thêm vào giỏ',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 18),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.rating.toStringAsFixed(2),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.p8),
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: AppSizes.p12),
-            Expanded(
-              child: SizedBox(
-                height: 46,
-                child: FilledButton(
-                  onPressed: () {},
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accentOrange,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.p8),
+                const SizedBox(height: AppSizes.p12),
+                // Giá sau giảm & Giá gốc
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '\$${item.finalPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepOrange,
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Mua ngay',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    const SizedBox(width: AppSizes.p12),
+                    Text(
+                      '\$${item.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: AppColors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.p8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '-${item.discountPercentage.round()}%',
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 32),
+                const Text(
+                  'Mô tả sản phẩm',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              ),
+                const SizedBox(height: AppSizes.p8),
+                Text(
+                  item.description,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        // Thanh nút dưới cùng
+        Container(
+          padding: const EdgeInsets.all(AppSizes.p16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: AppColors.border)),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã thêm "${item.title}" vào giỏ hàng'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_shopping_cart),
+              label: const Text(
+                'Thêm vào giỏ hàng',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.p8),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

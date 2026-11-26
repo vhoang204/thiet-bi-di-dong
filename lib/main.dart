@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'core/app_colors.dart';
 import 'core/app_sizes.dart';
+import 'providers/auth_notifier.dart';
+import 'providers/product_notifier.dart';
 import 'screens/dangnhap.dart';
 import 'screens/dangky.dart';
 import 'screens/quenmatkhau.dart';
@@ -9,7 +12,17 @@ import 'screens/danhsach.dart';
 import 'screens/chitietsanpham.dart';
 import 'screens/giohang.dart';
 
-void main() => runApp(const ShopEasyApp());
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProductNotifier()..initData()),
+        ChangeNotifierProvider(create: (_) => AuthNotifier()),
+      ],
+      child: const ShopEasyApp(),
+    ),
+  );
+}
 
 class ShopEasyApp extends StatelessWidget {
   const ShopEasyApp({super.key});
@@ -61,15 +74,15 @@ class HomeMenu extends StatelessWidget {
       },
       {
         'code': 'GD 6',
-        'title': 'Danh sách sản phẩm',
+        'title': 'Danh sách sản phẩm (API)',
         'minutes': 40,
         'screen': const Gd06ProductList(),
       },
       {
         'code': 'GD 7',
-        'title': 'Chi tiết sản phẩm',
+        'title': 'Chi tiết sản phẩm (API)',
         'minutes': 45,
-        'screen': const Gd07ProductDetail(),
+        'screen': const Gd07ProductDetail(productId: 1),
       },
       {
         'code': 'GD 8',
@@ -81,7 +94,7 @@ class HomeMenu extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thực hành Giao diện Flutter'),
+        title: const Text('Thực hành Giao diện & API'),
         backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
       ),
